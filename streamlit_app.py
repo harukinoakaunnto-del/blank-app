@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_taitle = "消えないタスクメモ" , page_icon="📚")
+st.set_page_config(page_title = "消えないタスクメモ" , page_icon="📚")
 st.title("📚絶対消えないタスクメモ")
 
 def load_data():
@@ -10,7 +10,7 @@ def load_data():
         base_url = raw_url.split("/edit")[0]
         csv_url = f"{base_url}/export?format=csv"
 
-        return pd.read_csv(csv_url)
+    return pd.read_csv(csv_url)
     except Exception as e:
         st.error(f"まだデータがないか、設定ミスかも！:{e}")
         return pd.DataFrame(columns=['task','date'])
