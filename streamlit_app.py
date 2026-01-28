@@ -11,7 +11,7 @@ def load_data():
         csv_url = f"{base_url}/export?format=csv"
 
         return pd.read_csv(csv_url)
-        except Exception as e:
+    except Exception as e:
         st.error(f"まだデータがないか、設定ミスかも！:{e}")
         return pd.DataFrame(columns=['task','date'])
 
