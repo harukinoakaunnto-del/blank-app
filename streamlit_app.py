@@ -6,7 +6,7 @@ st.taitle("📚絶対消えないタスクメモ")
 
 def load_data():
     try:
-        raw_url = st.secrets["GSHEET_URL]
+        raw_url = st.secrets["GSHEET_URL"]
 
         base_url = raw_url.split("/edit")[0]
         csv_url = f"{base_url}/export?format=csv"
