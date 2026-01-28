@@ -2,8 +2,8 @@ import streamlit as st
 import pandas as pd
 
 # 1. ページの設定
-st.set_page_config(page_title="タスクメモ", page_icon="📚")
-st.title("📚 タスクメモ")
+st.set_page_config(page_title="消えないタスクメモ", page_icon="📚")
+st.title("📚 消えないタスクメモ")
 
 def load_data():
     try:
