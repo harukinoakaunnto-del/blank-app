@@ -20,7 +20,7 @@ df = load_data()
 st.subheader("現在のタスク")
 if df.empty:
     st.info("スプレッドシートの二枚目に何か書いてみて！")
-elso:
+else:
     st.dataframe(df, use_container_width=True)
     
 st.divider()
