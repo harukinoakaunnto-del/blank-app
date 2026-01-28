@@ -9,22 +9,15 @@ def load_data():
         raw_url = st.secrets["GSHEET_URL"]
         base_url = raw_url.split("/edit")[0]
         csv_url = f"{base_url}/export?format=csv"
-        # 見出しを無視して読み込み、新しく名前を割り当てる
-        df = pd.read_csv(csv_url, header=0)
+        # 見出しを読み込まず、データだけ読み込む
+        df = pd.read_csv(csv_url)
         
-        # 列の名前を強制的に上書き（左から順に：タスク, 日付, 完了, 期限, 重要度）
-        # スプレッドシートのA, B, C, D, E列の順番に合わせています
-        expected_cols = ['task', 'date', 'done', 'deadline', 'priority']
+        # 列の名前を「番号」で強制的に付け直す
+        # これでスプレッドシートの1行目に何が書いてあっても関係なくなります！
+        new_names = ['task', 'date', 'done', 'deadline', 'priority']
+        df.columns = new_names[:len(df.columns)]
         
-        # 読み込んだデータの列数に合わせて名前を付ける
-        df.columns = expected_cols[:len(df.columns)]
-        
-        # 必要な列が足りない場合の補完
-        for c in expected_cols:
-            if c not in df.columns:
-                df[c] = ""
-
-        # データ変換
+        # データの整理
         df['deadline_dt'] = pd.to_datetime(df['deadline'], errors='coerce')
         df['done_flag'] = df['done'].astype(str).str.lower().isin(['true', 'checked', '1'])
         df = df.dropna(subset=['task'])
@@ -36,6 +29,7 @@ def load_data():
 df = load_data()
 
 if df is not None:
+    # 完了済みを隠す設定
     show_completed = st.sidebar.checkbox("完了したタスクも表示する", value=False)
     display_df = df[df['done_flag'] == False].copy() if not show_completed else df.copy()
 
@@ -45,33 +39,26 @@ if df is not None:
     st.write(f"全体の進捗: {done_count} / {total_count}")
     st.progress(done_count / total_count if total_count > 0 else 0)
 
-    # 検索
-    search_term = st.text_input("タスクを検索🔍", "")
-    if search_term:
-        display_df = display_df[display_df['task'].astype(str).str.contains(search_term, na=False)]
-
     # 期限計算
     now = pd.Timestamp.now().normalize()
     display_df['あと何日'] = (display_df['deadline_dt'] - now).dt.days
-    
-    # 並び替え
-    display_df['priority_num'] = pd.to_numeric(display_df['priority'], errors='coerce').fillna(99)
-    display_df = display_df.sort_values(by=['priority_num', 'deadline_dt'])
 
+    # 色をつけるルール
     def color_rows(row):
         style = [''] * len(row)
         if row['done_flag']:
             style = ['background-color: #d4edda; text-decoration: line-through; color: #155724;'] * len(row)
         elif pd.notnull(row['あと何日']) and row['あと何日'] < 0:
+            # 期限切れは赤く光る！
             style = ['background-color: #ffcccc; color: #cc0000; font-weight: bold; border: 2px solid red;'] * len(row)
         elif pd.notnull(row['あと何日']) and 0 <= row['あと何日'] <= 3:
             style = ['background-color: #fff3cd; color: #856404; font-weight: bold;'] * len(row)
         return style
 
     st.subheader("現在のタスク")
-    # 表示する列（名前を固定しているので安心！）
-    cols_to_show = ['task', 'date', 'deadline', 'あと何日', 'priority', 'done']
-    st.dataframe(display_df[cols_to_show].style.apply(color_rows, axis=1))
+    # 表示する列を指定（ここもKeyErrorが出ないように慎重に選んでいます）
+    cols = [c for c in ['task', 'date', 'deadline', 'あと何日', 'priority'] if c in display_df.columns]
+    st.dataframe(display_df[cols].style.apply(color_rows, axis=1))
 
 else:
     st.write("スプレッドシートを確認してください。")
