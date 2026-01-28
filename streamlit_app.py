@@ -23,6 +23,8 @@ df = load_data()
 
 if df is not None:
     # --- 4. 進捗バー ---
+    df = df.dropna(subset=['task']) 
+    
     done_count = len(df[df['done'].astype(str).str.lower() == 'true'])
     total_count = len(df)
     progress = done_count / total_count if total_count > 0 else 0
