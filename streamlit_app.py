@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 st.set_page_config(page_taitle = "消えないタスクメモ" , page_icon="📚")
-st.taitle("📚絶対消えないタスクメモ")
+st.title("📚絶対消えないタスクメモ")
 
 def load_data():
     try:
