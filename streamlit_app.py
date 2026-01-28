@@ -1,32 +1,33 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title = "消えないタスクメモ" , page_icon="📚")
-st.title("📚絶対消えないタスクメモ")
+# 1. ページの設定（タイトルとアイコン）
+st.set_page_config(page_title="絶対に消えないタスクメモ", page_icon="📚")
+st.title("📚 絶対に消えないタスクメモ")
 
+# 2. データを読み込む関数の定義
 def load_data():
     try:
+        # シークレットからURLを取得
         raw_url = st.secrets["GSHEET_URL"]
+        # URLをCSV書き出し用に変換
         base_url = raw_url.split("/edit")[0]
         csv_url = f"{base_url}/export?format=csv"
-
-    return pd.read_csv(csv_url)
+        # データを読み込んで返す
+        return pd.read_csv(csv_url)
     except Exception as e:
-        st.error(f"まだデータがないか、設定ミスかも！:{e}")
-        return pd.DataFrame(columns=['task','date'])
+        # エラーが起きた場合は画面に表示する
+        st.error(f"まだデータがないか、設定ミスかも！: {e}")
+        return None
 
-df = load_data() 
+# 3. データの表示
+df = load_data()
 
 st.subheader("現在のタスク")
-if df.empty:
-    st.info("スプレッドシートの二枚目に何か書いてみて！")
+if df is not None:
+    st.dataframe(df)
 else:
-    st.dataframe(df, use_container_width=True)
-    
-st.divider()
-st.write("### 使い方")
-st.write("1.PCでスプレッドシートの二行目に文字を入れる")
-st.write("2.スマホでこの画面を更新する")
+    st.write("スプレッドシートを確認してください。")
 
-if st.button("最新の状態にする"):
-    st.rerun()
+# 4. 区切り線
+st.divider()
