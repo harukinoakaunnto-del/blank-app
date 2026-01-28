@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 
-# 1. ページの設定
 st.set_page_config(page_title="消えないタスクメモ", page_icon="📚")
 st.title("📚 消えないタスクメモ")
 
@@ -10,36 +9,35 @@ def load_data():
         raw_url = st.secrets["GSHEET_URL"]
         base_url = raw_url.split("/edit")[0]
         csv_url = f"{base_url}/export?format=csv"
-        df = pd.read_csv(csv_url)
+        # 見出しを無視して読み込み、新しく名前を割り当てる
+        df = pd.read_csv(csv_url, header=0)
         
-        # --- 🛡️ ここで列の名前をチェックしてエラーを防ぐ ---
-        # 列名の前後の空白を消す
-        df.columns = df.columns.str.strip()
+        # 列の名前を強制的に上書き（左から順に：タスク, 日付, 完了, 期限, 重要度）
+        # スプレッドシートのA, B, C, D, E列の順番に合わせています
+        expected_cols = ['task', 'date', 'done', 'deadline', 'priority']
         
-        # 必要な列がなければ空で作っておく（KeyError対策）
-        cols = ['task', 'done', 'deadline', 'priority', 'date']
-        for c in cols:
+        # 読み込んだデータの列数に合わせて名前を付ける
+        df.columns = expected_cols[:len(df.columns)]
+        
+        # 必要な列が足りない場合の補完
+        for c in expected_cols:
             if c not in df.columns:
-                df[c] = "" 
-        
+                df[c] = ""
+
         # データ変換
-        df['deadline'] = pd.to_datetime(df['deadline'], errors='coerce')
-        df['done_flag'] = df['done'].astype(str).str.lower() == 'true'
+        df['deadline_dt'] = pd.to_datetime(df['deadline'], errors='coerce')
+        df['done_flag'] = df['done'].astype(str).str.lower().isin(['true', 'checked', '1'])
         df = df.dropna(subset=['task'])
         return df
     except Exception as e:
-        st.error(f"読み込みエラーが発生しました: {e}")
+        st.error(f"読み込みエラー: {e}")
         return None
 
 df = load_data()
 
 if df is not None:
     show_completed = st.sidebar.checkbox("完了したタスクも表示する", value=False)
-
-    if not show_completed:
-        display_df = df[df['done_flag'] == False].copy()
-    else:
-        display_df = df.copy()
+    display_df = df[df['done_flag'] == False].copy() if not show_completed else df.copy()
 
     # 進捗バー
     done_count = len(df[df['done_flag'] == True])
@@ -52,15 +50,14 @@ if df is not None:
     if search_term:
         display_df = display_df[display_df['task'].astype(str).str.contains(search_term, na=False)]
 
-    # 残り日数の計算
+    # 期限計算
     now = pd.Timestamp.now().normalize()
-    display_df['あと何日'] = (display_df['deadline'] - now).dt.days
+    display_df['あと何日'] = (display_df['deadline_dt'] - now).dt.days
     
-    # 並び替え（priorityが空だとエラーになるので文字に変換して処理）
-    display_df['priority'] = pd.to_numeric(display_df['priority'], errors='coerce').fillna(99)
-    display_df = display_df.sort_values(by=['priority', 'deadline'])
+    # 並び替え
+    display_df['priority_num'] = pd.to_numeric(display_df['priority'], errors='coerce').fillna(99)
+    display_df = display_df.sort_values(by=['priority_num', 'deadline_dt'])
 
-    # 色をつけるルール
     def color_rows(row):
         style = [''] * len(row)
         if row['done_flag']:
@@ -72,14 +69,9 @@ if df is not None:
         return style
 
     st.subheader("現在のタスク")
-    view_columns = ['task', 'date', 'deadline', 'あと何日', 'priority', 'done']
-    
-    # 表示する列が実際に存在するものだけに絞る
-    actual_cols = [c for c in view_columns if c in display_df.columns]
-    
-    if not display_df.empty:
-        st.dataframe(display_df[actual_cols].style.apply(color_rows, axis=1))
-    else:
-        st.info("やるべきことは全部終わりました！")
+    # 表示する列（名前を固定しているので安心！）
+    cols_to_show = ['task', 'date', 'deadline', 'あと何日', 'priority', 'done']
+    st.dataframe(display_df[cols_to_show].style.apply(color_rows, axis=1))
+
 else:
-    st.write("スプレッドシートの準備をしてね。")
+    st.write("スプレッドシートを確認してください。")
